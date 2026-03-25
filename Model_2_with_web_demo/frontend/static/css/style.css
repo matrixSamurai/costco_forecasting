@@ -1,0 +1,352 @@
+/* Costco Wholesale brand colors */
+:root {
+  --costco-blue: #005DAA;
+  --costco-blue-dark: #004080;
+  --costco-red: #E31837;
+  --costco-red-dark: #c01430;
+  --costco-white: #FFFFFF;
+  --costco-gray-100: #f5f6f8;
+  --costco-gray-200: #e8eaed;
+  --costco-gray-700: #4a5568;
+  --costco-gray-800: #2d3748;
+  --costco-gray-900: #1a202c;
+  --shadow: 0 2px 8px rgba(0, 93, 170, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 93, 170, 0.12);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --font-sans: "DM Sans", system-ui, -apple-system, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { font-size: 16px; scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--costco-gray-800);
+  background: var(--costco-gray-100);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.site-header {
+  background: linear-gradient(135deg, var(--costco-blue) 0%, var(--costco-blue-dark) 100%);
+  color: var(--costco-white);
+  padding: 1.5rem 1.5rem 2rem;
+  box-shadow: var(--shadow-lg);
+}
+
+.header-inner { max-width: 960px; margin: 0 auto; }
+
+.logo { margin: 0; font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; }
+
+.tagline { margin: 0.35rem 0 0; font-size: 0.95rem; opacity: 0.92; }
+
+.main {
+  flex: 1;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+  width: 100%;
+}
+
+.hero { margin-bottom: 2rem; }
+.hero h2 { margin: 0 0 0.5rem; font-size: 1.5rem; font-weight: 700; color: var(--costco-gray-900); }
+.hero p { margin: 0; color: var(--costco-gray-700); }
+
+/* Presets */
+.presets { margin-bottom: 2rem; }
+.presets h3 { margin: 0 0 1rem; font-size: 1.1rem; font-weight: 600; color: var(--costco-gray-800); }
+
+.preset-buttons { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+
+/* Buttons */
+.btn {
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.btn:active { transform: scale(0.98); }
+
+.btn-preset {
+  background: var(--costco-white);
+  color: var(--costco-blue);
+  border: 2px solid var(--costco-blue);
+}
+.btn-preset:hover { background: var(--costco-blue); color: var(--costco-white); box-shadow: var(--shadow); }
+
+.btn-primary {
+  background: var(--costco-red);
+  color: var(--costco-white);
+  margin-top: 1.25rem;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+}
+.btn-primary:hover { background: var(--costco-red-dark); box-shadow: var(--shadow); }
+.btn-primary:disabled { background: var(--costco-gray-700); cursor: not-allowed; transform: none; }
+
+/* Form */
+.weather-form {
+  background: var(--costco-white);
+  padding: 1.5rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 2rem;
+}
+.weather-form h3 { margin: 0 0 1rem; font-size: 1.1rem; font-weight: 600; color: var(--costco-gray-800); }
+.weather-form .form-intro { margin: 0 0 1rem; font-size: 0.9rem; color: var(--costco-gray-700); }
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1rem 1.5rem;
+}
+
+.field label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--costco-gray-700);
+  margin-bottom: 0.35rem;
+}
+
+.field input, .field-select {
+  width: 100%;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  padding: 0.5rem 0.65rem;
+  border: 2px solid var(--costco-gray-200);
+  border-radius: var(--radius-sm);
+  color: var(--costco-gray-800);
+  background: var(--costco-white);
+  transition: border-color 0.2s ease;
+}
+.field input:focus, .field-select:focus { outline: none; border-color: var(--costco-blue); }
+
+.field-hint {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--costco-blue);
+  margin-top: 0.25rem;
+  font-weight: 600;
+}
+
+/* Results */
+.results {
+  background: var(--costco-white);
+  padding: 1.5rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.results[aria-hidden="true"] { display: none; }
+.results[aria-hidden="false"] { display: block; }
+.results h3 { margin: 0 0 0.5rem; font-size: 1.1rem; font-weight: 600; color: var(--costco-gray-800); }
+.results-intro { margin: 0 0 1.25rem; font-size: 0.9rem; color: var(--costco-gray-700); }
+
+/* Loss cards */
+.loss-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.loss-card {
+  background: var(--costco-gray-100);
+  border-radius: var(--radius-sm);
+  padding: 1.25rem 1rem;
+  text-align: center;
+  border-left: 4px solid var(--costco-blue);
+}
+
+.loss-card .card-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--costco-gray-700);
+  margin: 0 0 0.35rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.loss-card .card-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--costco-gray-900);
+  margin: 0;
+}
+
+/* Chart */
+.chart-wrap {
+  max-width: 420px;
+  margin: 0 auto 1.5rem;
+  padding: 0 0.5rem;
+}
+
+/* Detail table */
+.detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  margin: 1.5rem 0;
+}
+.detail-table td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--costco-gray-200);
+}
+.detail-table td:first-child { color: var(--costco-gray-700); width: 55%; }
+.detail-table td:last-child { text-align: right; color: var(--costco-gray-900); }
+
+/* Formula note */
+.formula-note {
+  font-size: 0.85rem;
+  color: var(--costco-gray-700);
+  padding: 0.75rem 1rem;
+  background: var(--costco-gray-100);
+  border-radius: var(--radius-sm);
+}
+.formula-note code {
+  background: var(--costco-white);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.8em;
+}
+
+/* Error toast */
+.error-toast {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(120%);
+  background: var(--costco-red);
+  color: var(--costco-white);
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-weight: 500;
+  box-shadow: var(--shadow-lg);
+  transition: transform 0.25s ease;
+  z-index: 1000;
+  max-width: 90vw;
+}
+.error-toast[aria-hidden="false"] { transform: translateX(-50%) translateY(0); }
+
+/* Loader */
+.loader-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+.loader-overlay[aria-hidden="true"] { opacity: 0; visibility: hidden; pointer-events: none; }
+.loader-overlay[aria-hidden="false"] { opacity: 1; visibility: visible; }
+
+.loader-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.35); }
+
+.loader-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.75rem 2rem;
+  background: var(--costco-white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+}
+
+.loader-spinner {
+  width: 44px;
+  height: 44px;
+  border: 4px solid var(--costco-gray-200);
+  border-top-color: var(--costco-blue);
+  border-radius: 50%;
+  animation: loader-spin 0.85s linear infinite;
+}
+
+.loader-message {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--costco-gray-800);
+}
+
+@keyframes loader-spin { to { transform: rotate(360deg); } }
+
+/* Footer */
+.site-footer {
+  background: var(--costco-gray-800);
+  color: var(--costco-gray-200);
+  padding: 1rem 1.5rem;
+  text-align: center;
+  font-size: 0.85rem;
+}
+.site-footer p { margin: 0; }
+
+/* Card subtitle */
+.loss-card .card-sub {
+  font-size: 0.75rem;
+  color: var(--costco-gray-700);
+  margin: 0.25rem 0 0;
+}
+
+/* Recommendations */
+.recommendations { margin-bottom: 1.5rem; }
+
+.recs-title {
+  margin: 0 0 0.75rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--costco-gray-800);
+}
+
+.recs-list { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.rec-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  border-left: 4px solid var(--costco-gray-200);
+  background: var(--costco-gray-100);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.rec-badge {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+  margin-top: 0.1rem;
+}
+
+.rec-message { color: var(--costco-gray-800); }
+
+.rec-critical { border-left-color: var(--costco-red); }
+.rec-critical .rec-badge { background: var(--costco-red); color: var(--costco-white); }
+
+.rec-warning { border-left-color: #d97706; }
+.rec-warning .rec-badge { background: #fef3c7; color: #92400e; }
+
+.rec-info { border-left-color: #0d9488; }
+.rec-info .rec-badge { background: #ccfbf1; color: #065f46; }
+
+@media (min-width: 640px) {
+  .form-grid { grid-template-columns: repeat(4, 1fr); }
+}
