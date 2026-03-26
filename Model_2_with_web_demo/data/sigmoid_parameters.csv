@@ -1,5 +1,0 @@
-parameter,value,description
-k,0.088576,Steepness of sigmoid curve
-x0,80.8961,Midpoint consumption % where loss ~50%
-L_min,0.07,Baseline minimum loss rate
-beta,1.8,Non-linear consumption exponent

@@ -19,19 +19,8 @@ Usage:
 """
 
 import os
-import sys
-
-import numpy as np
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
-
-# Add Model 1 backend to path
-MODEL1_BACKEND = os.path.join(
-    PROJECT_ROOT, "model 1/ver2/costco_forecasting-master/backend"
-)
-if MODEL1_BACKEND not in sys.path:
-    sys.path.insert(0, MODEL1_BACKEND)
 
 from predict_loss import LossPredictor
 
