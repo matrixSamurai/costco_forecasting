@@ -47,7 +47,7 @@ MODEL_DISPLAY_NAMES = {
     "xgboost": "XGBoost",
 }
 
-# Must match predict_delay.py and the order expected by the API
+# Must match predict_delay.py and build_delay_model.py (date + winter_severity + per-segment time)
 FEATURE_NAMES = [
     "temp_min_mean",
     "temp_max_mean",
@@ -62,14 +62,36 @@ FEATURE_NAMES = [
     "journey_start_day_of_week",
     "journey_start_month",
     "week_of_year",
+    "day_of_year",
+    "winter_severity",
+    "segment_start_hour",
 ]
 
-# Keys in synthetic JSON: weather.* and hour, day_of_week, month, week_of_year
+# Keys in synthetic JSON: weather.* and hour, day_of_week, month, week_of_year, day_of_year (optional), segment_start_hour (optional)
 WEATHER_KEYS = [
     "temp_min_mean", "temp_max_mean", "temp_mean_mean",
     "snow_depth_mean", "prcp_total_mean", "visibility_mean",
     "wind_speed_mean", "wind_speed_max_mean", "wind_gust_max_mean",
 ]
+
+
+def _month_to_day_of_year(month):
+    """Approximate day-of-year at mid-month (1-365)."""
+    if month < 1 or month > 12:
+        return 183
+    mid_days = [15, 44, 74, 105, 135, 166, 196, 227, 258, 288, 319, 349]
+    return mid_days[month - 1]
+
+
+def _winter_severity(day_of_year):
+    """0-1: peak winter = 1, March = 0.6, summer = 0. Must match build_delay_model."""
+    if day_of_year <= 45 or day_of_year >= 320:
+        return 1.0
+    if 46 <= day_of_year <= 80 or 280 <= day_of_year <= 319:
+        return 0.6
+    if 81 <= day_of_year <= 120 or 245 <= day_of_year <= 279:
+        return 0.3
+    return 0.0
 
 
 def load_synthetic_data(path):
@@ -85,7 +107,7 @@ def load_synthetic_data(path):
 def records_to_xy(records):
     """
     Build feature matrix X and target y from historical_delays records.
-    X: [weather_9, hour, day_of_week, month, week_of_year] per record.
+    X: [weather_9, journey_start_hour, day_of_week, month, week_of_year, day_of_year, segment_start_hour] per record.
     y: delay_pct.
     """
     X_rows = []
@@ -98,10 +120,21 @@ def records_to_xy(records):
         for k in WEATHER_KEYS:
             val = w.get(k)
             row.append(float(val) if val is not None else 0.0)
-        row.append(int(r.get("hour", 0)) % 24)
+        hour = int(r.get("hour", 0)) % 24
+        row.append(hour)
         row.append(int(r.get("day_of_week", 0)) % 7)
-        row.append(max(1, min(12, int(r.get("month", 1)))))
+        month = max(1, min(12, int(r.get("month", 1))))
+        row.append(month)
         row.append(max(1, min(52, int(r.get("week_of_year", 1)))))
+        day_of_year = int(r.get("day_of_year", 0)) or _month_to_day_of_year(month)
+        row.append(max(1, min(365, day_of_year)))
+        row.append(_winter_severity(day_of_year))
+        # segment_start_hour: use hour from record (trip time) or same as journey_start_hour
+        seg_hour = r.get("segment_start_hour")
+        if seg_hour is not None:
+            row.append(float(seg_hour) % 24.0)
+        else:
+            row.append(float(hour))
         X_rows.append(row)
         y_list.append(float(r.get("delay_pct", 0)))
     X = np.array(X_rows, dtype=np.float64)

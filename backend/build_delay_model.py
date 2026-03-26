@@ -2,10 +2,10 @@
 Build a regression model to predict delay % from baseline using segment data from
 routes_with_weather_and_substation_time.json and weather from point_weekly_weather.json.
 
-For each segment we look up weather_key in point_weekly_weather, aggregate 52-week
-stats to features, define a synthetic delay % target from weather severity, and fit
-a model. The saved model can be used later to predict delay_pct for any segment
-given its weather features.
+Features include weather (9) plus date and time: journey_start (hour, day_of_week, month, week_of_year),
+day_of_year (1-365), and segment_start_hour (time when the driver starts each segment, computed from
+cumulative duration along the route). This allows higher delay in winter (e.g. Jan 12) vs spring (Mar 28)
+and at night (reduced speed) vs daylight. Synthetic target adds seasonal and night premiums.
 
 Usage:
   pip install -r requirements.txt
@@ -65,6 +65,9 @@ FEATURE_NAMES = [
     "journey_start_day_of_week",
     "journey_start_month",
     "week_of_year",
+    "day_of_year",
+    "winter_severity",  # 0-1: peak winter (Dec/Jan) = 1, March = 0.6, summer = 0 → colder = more delay
+    "segment_start_hour",
 ]
 
 
@@ -96,10 +99,37 @@ def aggregate_weekly_weather(weekly_list):
     return out
 
 
-def synthetic_delay_pct(agg):
+def _month_to_day_of_year(month):
+    """Approximate day-of-year at mid-month (1-365)."""
+    if month < 1 or month > 12:
+        return 183
+    mid_days = [15, 44, 74, 105, 135, 166, 196, 227, 258, 288, 319, 349]
+    return mid_days[month - 1]
+
+
+def _is_night_hour(hour):
+    """True if hour is typically night driving (reduced visibility, more delay). 22:00-05:59."""
+    return hour >= 22 or hour < 6
+
+
+def _winter_severity(day_of_year):
+    """Rough winter factor: higher in Jan/Feb/Dec (0 to ~1)."""
+    # Peak winter around day 15-45 (Jan), 320-365 (Dec)
+    if day_of_year <= 45 or day_of_year >= 320:
+        return 1.0
+    if 46 <= day_of_year <= 80 or 280 <= day_of_year <= 319:
+        return 0.6
+    if 81 <= day_of_year <= 120 or 245 <= day_of_year <= 279:
+        return 0.3
+    return 0.0
+
+
+def synthetic_delay_pct(agg, month=None, day_of_year=None, segment_start_hour=None):
     """
-    Synthetic delay % from weather (no observed delays in data).
-    Uses same fields as point_weekly_weather.json aggregation.
+    Synthetic delay % from weather and date/time (no observed delays in data).
+    - Weather: snow, precip, visibility, wind, freezing temp.
+    - Date: winter (e.g. Jan 12) adds more delay than spring (Mar 28).
+    - Time: night driving (e.g. 22:00-05:59) adds delay vs daylight.
     """
     if agg is None:
         return 0.0
@@ -113,6 +143,14 @@ def synthetic_delay_pct(agg):
     delay += min(10.0, 0.3 * (wg or 0))
     if (agg.get("temp_min_mean") or 40) < 32:
         delay += 12.0
+    # Seasonal: winter (Jan/Feb/Dec) adds delay vs spring/summer
+    if day_of_year is not None:
+        delay += 8.0 * _winter_severity(day_of_year)
+    elif month is not None and month in (1, 2, 12):
+        delay += 8.0
+    # Time of day: night driving adds delay (harder to drive, lower effective speed)
+    if segment_start_hour is not None and _is_night_hour(segment_start_hour):
+        delay += 6.0
     return min(50.0, max(0.0, delay))
 
 
@@ -134,7 +172,7 @@ def build_weather_aggregates(path):
 
 def collect_segments(routes_path, weather_agg, max_segments):
     """Yield (features_vec, delay_pct) for each segment with valid weather.
-    Augments each segment with random journey start hour/day/month so models are trained with datetime inputs.
+    Uses journey start date/time and per-segment start time (cumulative from duration_to_next_min).
     """
     print("Loading", routes_path, "...")
     with open(routes_path, "r", encoding="utf-8") as f:
@@ -144,6 +182,11 @@ def collect_segments(routes_path, weather_agg, max_segments):
     for wh in warehouses:
         for route in wh.get("routes") or []:
             path = route.get("path_coordinates") or []
+            # Cumulative minutes from depot to start of each segment (index i = minutes to reach point i)
+            cum_minutes = [0.0]
+            for j in range(len(path) - 1):
+                d = path[j].get("duration_to_next_min")
+                cum_minutes.append(cum_minutes[-1] + (float(d) if d is not None else 0.0))
             for i in range(len(path) - 1):
                 if max_segments and n >= max_segments:
                     print("  Collected", n, "segments (capped)")
@@ -153,11 +196,17 @@ def collect_segments(routes_path, weather_agg, max_segments):
                 if not wk or wk not in weather_agg:
                     continue
                 feats = weather_agg[wk]
-                # Random journey start time and week of year for training (no real timestamps in segment data)
+                # Random journey start time and date for training
                 hour = np.random.randint(0, 24)
                 day_of_week = np.random.randint(0, 7)
                 month = np.random.randint(1, 13)
                 week_of_year = np.random.randint(1, 53)
+                day_of_year = _month_to_day_of_year(month)
+                # Explicit "how wintery" so model learns: colder day (higher winter_severity) = more delay
+                winter_sev = _winter_severity(day_of_year)
+                # Time when driver *starts* this segment = journey_start + cumulative minutes so far
+                cumulative_min = cum_minutes[i]
+                segment_start_hour = (hour + cumulative_min / 60.0) % 24.0
                 vec = np.array([
                     feats.get("temp_min_mean", 50),
                     feats.get("temp_max_mean", 70),
@@ -172,8 +221,13 @@ def collect_segments(routes_path, weather_agg, max_segments):
                     float(day_of_week),
                     float(month),
                     float(week_of_year),
+                    float(day_of_year),
+                    float(winter_sev),
+                    float(segment_start_hour),
                 ], dtype=np.float64)
-                delay_pct = synthetic_delay_pct(feats)
+                delay_pct = synthetic_delay_pct(
+                    feats, month=month, day_of_year=day_of_year, segment_start_hour=segment_start_hour
+                )
                 n += 1
                 yield vec, delay_pct
     print("  Collected", n, "segments")

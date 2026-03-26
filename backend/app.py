@@ -22,7 +22,7 @@ except ImportError:
 if ROOT not in __import__("sys").path:
     __import__("sys").path.insert(0, ROOT)
 
-from predict_delay import predict_all_models
+from predict_delay import predict_all_models, parse_journey_start
 from route_utils import (
     load_warehouses,
     TRACY_DEPOT,
@@ -157,6 +157,20 @@ def api_route_delays():
         return jsonify({"error": "routes must be an array"}), 400
 
     try:
+        # Parse journey start hour/minute for per-segment time (each segment starts at journey_start + cumulative minutes)
+        journey_hour, journey_minute = 12, 0
+        if journey_start:
+            h, _, _, _, _ = parse_journey_start(journey_start)
+            journey_hour = h
+            if journey_start.get("time"):
+                try:
+                    t = str(journey_start["time"]).strip()[:5]
+                    if ":" in t:
+                        parts = t.split(":")
+                        journey_minute = int(parts[1]) if len(parts) > 1 else 0
+                except (ValueError, TypeError):
+                    pass
+
         out_routes = []
         for idx, r in enumerate(routes_in):
             if not isinstance(r, dict):
@@ -164,11 +178,19 @@ def api_route_delays():
             polyline = r.get("polyline") or ""
             points = decode_polyline(polyline)
             sampled = sample_route_points_by_distance(points)
+            total_duration_min = (float(r.get("duration_s") or 0) / 60.0)
+            n_pitstops = len(sampled)
+            seg_count = max(1, n_pitstops - 1)
             delays_per_point = []
-            for lat, lng in sampled:
+            for i, (lat, lng) in enumerate(sampled):
                 feats = get_weather_features_for_pitstop(lat, lng)
                 if feats:
-                    preds = predict_all_models(feats, journey_start=journey_start)
+                    # Time when driver starts this segment = journey start + cumulative minutes so far
+                    cumulative_min = (i * (total_duration_min / seg_count)) if seg_count else 0.0
+                    segment_start_hour = (journey_hour + journey_minute / 60.0 + cumulative_min / 60.0) % 24.0
+                    preds = predict_all_models(
+                        feats, journey_start=journey_start, segment_start_hour=segment_start_hour
+                    )
                     delays_per_point.append(preds)
             if not delays_per_point:
                 avg_delays = {"Ridge": 0, "Random Forest": 0, "XGBoost": 0}
