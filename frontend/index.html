@@ -27,8 +27,26 @@
       <h3>Source & destination</h3>
       <div class="route-fields">
         <div class="field-group">
-          <label>Source</label>
+          <label for="source-mode">Source mode</label>
+          <select id="source-mode" class="field-select">
+            <option value="tracy" selected>1) Tracy Depot, California</option>
+            <option value="city">2) Enter city name</option>
+            <option value="gps">3) Use my current location (GPS)</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Selected source</label>
           <p class="field-readonly" id="source-display">Tracy Depot, CA (37.7397, -121.4252)</p>
+        </div>
+      </div>
+      <div class="route-fields">
+        <div class="field-group" id="source-city-wrap" style="display:none;">
+          <label for="source-city">Source city</label>
+          <input type="text" id="source-city" class="field-input" placeholder="e.g. Sacramento, CA" />
+        </div>
+        <div class="field-group" id="source-gps-wrap" style="display:none;">
+          <label>GPS location</label>
+          <button type="button" id="source-gps-btn" class="btn btn-secondary">Use my current location</button>
         </div>
         <div class="field-group">
           <label for="destination">Destination</label>

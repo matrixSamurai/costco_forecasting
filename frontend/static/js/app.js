@@ -34,6 +34,11 @@
   };
 
   const sourceDisplay = document.getElementById("source-display");
+  const sourceModeSelect = document.getElementById("source-mode");
+  const sourceCityWrap = document.getElementById("source-city-wrap");
+  const sourceGpsWrap = document.getElementById("source-gps-wrap");
+  const sourceCityInput = document.getElementById("source-city");
+  const sourceGpsBtn = document.getElementById("source-gps-btn");
   const destinationSelect = document.getElementById("destination");
   const routesBtn = document.getElementById("routes-btn");
   const predictDelayBtn = document.getElementById("predict-delay-btn");
@@ -46,6 +51,7 @@
   let lastRoutes = null;
   let lastOrigin = null;
   let lastDestination = null;
+  let selectedOrigin = { lat: TRACY_DEPOT.lat, lng: TRACY_DEPOT.lng, name: "Tracy Depot, CA" };
   let routesAbortController = null;
   const form = document.getElementById("weather-form");
   const predictBtn = document.getElementById("predict-btn");
@@ -119,14 +125,79 @@
   }
 
   // --- Source & warehouses ---
+  function setSelectedOrigin(origin) {
+    selectedOrigin = {
+      lat: Number(origin.lat),
+      lng: Number(origin.lng),
+      name: origin.name || "Custom source",
+    };
+    if (sourceDisplay) {
+      sourceDisplay.textContent =
+        selectedOrigin.name + " (" + selectedOrigin.lat.toFixed(4) + ", " + selectedOrigin.lng.toFixed(4) + ")";
+    }
+  }
+
+  function refreshSourceModeUI() {
+    if (!sourceModeSelect) return;
+    const mode = sourceModeSelect.value || "tracy";
+    if (sourceCityWrap) sourceCityWrap.style.display = mode === "city" ? "block" : "none";
+    if (sourceGpsWrap) sourceGpsWrap.style.display = mode === "gps" ? "block" : "none";
+    if (mode === "tracy") {
+      setSelectedOrigin({ lat: TRACY_DEPOT.lat, lng: TRACY_DEPOT.lng, name: "Tracy Depot, CA" });
+    }
+  }
+
+  function geocodeSourceCity(cityText) {
+    return fetch("/api/geocode-source", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ city: cityText }),
+    }).then(function (res) {
+      return res.json().then(function (body) {
+        if (!res.ok) throw new Error(body.error || "Failed to geocode city");
+        return body;
+      });
+    });
+  }
+
+  function useGpsSource() {
+    if (!navigator.geolocation) {
+      showError("Geolocation is not supported in this browser");
+      return;
+    }
+    if (sourceGpsBtn) {
+      sourceGpsBtn.disabled = true;
+      sourceGpsBtn.textContent = "Detecting…";
+    }
+    navigator.geolocation.getCurrentPosition(
+      function (pos) {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setSelectedOrigin({ lat: lat, lng: lng, name: "My current location" });
+        if (sourceGpsBtn) {
+          sourceGpsBtn.disabled = false;
+          sourceGpsBtn.textContent = "Use my current location";
+        }
+      },
+      function (err) {
+        showError("Could not get GPS location: " + (err && err.message ? err.message : "permission denied"));
+        if (sourceGpsBtn) {
+          sourceGpsBtn.disabled = false;
+          sourceGpsBtn.textContent = "Use my current location";
+        }
+      },
+      { enableHighAccuracy: true, timeout: 12000 }
+    );
+  }
+
   function loadSource() {
     fetch("/api/source")
       .then(function (r) { return r.json(); })
       .then(function (data) {
-        sourceDisplay.textContent = (data.name || "Tracy Depot, CA") + " (" + data.lat + ", " + data.lng + ")";
+        setSelectedOrigin({ lat: data.lat, lng: data.lng, name: data.name || "Tracy Depot, CA" });
       })
       .catch(function () {
-        sourceDisplay.textContent = "Tracy Depot, CA (37.7397, -121.4252)";
+        setSelectedOrigin({ lat: TRACY_DEPOT.lat, lng: TRACY_DEPOT.lng, name: "Tracy Depot, CA" });
       });
   }
 
@@ -299,14 +370,28 @@
     routesBtn.textContent = "Loading…";
     showLoader("Getting routes…");
 
-    fetch("/api/routes", {
+    const mode = sourceModeSelect ? sourceModeSelect.value : "tracy";
+    const resolveOriginPromise = mode === "city"
+      ? (function () {
+          const city = sourceCityInput ? String(sourceCityInput.value || "").trim() : "";
+          if (!city) return Promise.reject(new Error("Please enter a source city name"));
+          return geocodeSourceCity(city).then(function (g) {
+            setSelectedOrigin({ lat: g.lat, lng: g.lng, name: g.name || city });
+            return { lat: g.lat, lng: g.lng };
+          });
+        })()
+      : Promise.resolve({ lat: selectedOrigin.lat, lng: selectedOrigin.lng });
+
+    resolveOriginPromise.then(function (originToUse) {
+      return fetch("/api/routes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        origin: TRACY_DEPOT,
+        origin: originToUse,
         destination: dest,
       }),
       signal: signal,
+      });
     })
       .then(function (res) {
         return res.json().then(function (body) {
@@ -317,7 +402,7 @@
       .then(function (body) {
         const routes = body.routes || [];
         lastRoutes = routes;
-        lastOrigin = body.origin || TRACY_DEPOT;
+        lastOrigin = body.origin || { lat: selectedOrigin.lat, lng: selectedOrigin.lng };
         lastDestination = body.destination || dest;
         if (routesResults) routesResults.setAttribute("aria-hidden", "false");
         renderRouteCards(routes);
@@ -516,6 +601,11 @@
 
   // --- Init (main page: source, warehouses, routes; demo page: weather form only) ---
   if (sourceDisplay) loadSource();
+  if (sourceModeSelect) {
+    sourceModeSelect.addEventListener("change", refreshSourceModeUI);
+    refreshSourceModeUI();
+  }
+  if (sourceGpsBtn) sourceGpsBtn.addEventListener("click", useGpsSource);
   if (destinationSelect) loadWarehouses();
 
   if (routesBtn) routesBtn.addEventListener("click", onGetRoutes);

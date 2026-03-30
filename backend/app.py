@@ -8,6 +8,8 @@ Serves the frontend (from ../frontend) and exposes:
   POST /api/route-delays  - delay predictions per route from pitstops (small chunks) then aggregated
 """
 import os
+import urllib.parse
+import urllib.request
 from flask import Flask, request, jsonify, render_template
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -84,6 +86,42 @@ def api_config():
     """Optional: Maps API key for frontend map display (same key as Directions)."""
     key = os.environ.get("GOOGLE_MAPS_API_KEY") or os.environ.get("ROUTES_API_KEY")
     return jsonify({"mapsApiKey": key or ""})
+
+
+@app.route("/api/geocode-source", methods=["POST"])
+def api_geocode_source():
+    """Resolve a city/place string to (lat,lng) using Google Geocoding API."""
+    api_key = os.environ.get("GOOGLE_MAPS_API_KEY") or os.environ.get("ROUTES_API_KEY")
+    if not api_key:
+        return jsonify({"error": "GOOGLE_MAPS_API_KEY or ROUTES_API_KEY not set in environment"}), 503
+    try:
+        data = request.get_json() or {}
+        city = str(data.get("city", "")).strip()
+        if not city:
+            return jsonify({"error": "Missing city"}), 400
+        url = "https://maps.googleapis.com/maps/api/geocode/json?address=%s&key=%s" % (
+            urllib.parse.quote(city),
+            urllib.parse.quote(api_key),
+        )
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            geo = __import__("json").loads(resp.read().decode())
+        status = geo.get("status", "")
+        if status != "OK" or not geo.get("results"):
+            return jsonify({"error": "Could not resolve source city", "detail": status or "no results"}), 404
+        result = geo["results"][0]
+        loc = (result.get("geometry") or {}).get("location") or {}
+        lat = loc.get("lat")
+        lng = loc.get("lng")
+        if lat is None or lng is None:
+            return jsonify({"error": "Geocoding returned no coordinates"}), 502
+        return jsonify({
+            "name": result.get("formatted_address") or city,
+            "lat": float(lat),
+            "lng": float(lng),
+        })
+    except Exception as e:
+        return jsonify({"error": "Geocoding failed", "detail": str(e)}), 502
 
 
 @app.route("/api/routes", methods=["POST"])
