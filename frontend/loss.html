@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Revenue Loss Prediction — Costco Wholesale</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/loss.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <h1 class="logo">Costco Wholesale</h1>
+      <p class="tagline">Revenue Loss Prediction — Estimate lettuce spoilage loss from transit delays</p>
+    </div>
+  </header>
+
+  <main class="main">
+    <section class="hero">
+      <h2>Predict revenue loss from transit delays</h2>
+      <p>Enter <strong>cargo details</strong> and a <strong>delay scenario</strong> to estimate spoilage loss using the XGBoost model. Results are compared against the sigmoid baseline.</p>
+    </section>
+
+    <!-- Presets -->
+    <section class="presets">
+      <h3>Delay scenarios</h3>
+      <div class="preset-buttons">
+        <button type="button" class="btn btn-preset" data-preset="mild">Mild (0.5 h, 32 °F)</button>
+        <button type="button" class="btn btn-preset" data-preset="moderate">Moderate (24 h, 41 °F)</button>
+        <button type="button" class="btn btn-preset" data-preset="severe">Severe (72 h, 55 °F)</button>
+      </div>
+    </section>
+
+    <!-- Form -->
+    <section class="weather-form">
+      <h3>Cargo &amp; delay inputs</h3>
+      <p class="form-intro">Configure the lettuce shipment parameters and the delay scenario.</p>
+      <form id="loss-form" class="form-grid">
+        <div class="field">
+          <label for="lettuce_type">Lettuce type</label>
+          <select id="lettuce_type" name="lettuce_type" class="field-select">
+            <option value="iceberg">Iceberg</option>
+            <option value="romaine" selected>Romaine</option>
+            <option value="butterhead">Butterhead</option>
+            <option value="leaf">Leaf</option>
+            <option value="spring_mix">Spring Mix</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="organic">Organic</label>
+          <select id="organic" name="organic" class="field-select">
+            <option value="0" selected>Conventional</option>
+            <option value="1">Organic</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="quantity_lb">Quantity (lb)</label>
+          <input type="number" id="quantity_lb" name="quantity_lb" value="1000" min="1" max="100000" step="1" />
+        </div>
+        <div class="field">
+          <label for="month">Month</label>
+          <select id="month" name="month" class="field-select">
+            <option value="1">January</option>
+            <option value="2">February</option>
+            <option value="3">March</option>
+            <option value="4">April</option>
+            <option value="5">May</option>
+            <option value="6" selected>June</option>
+            <option value="7">July</option>
+            <option value="8">August</option>
+            <option value="9">September</option>
+            <option value="10">October</option>
+            <option value="11">November</option>
+            <option value="12">December</option>
+          </select>
+          <span class="field-hint" id="harvest-hint"></span>
+        </div>
+        <div class="field">
+          <label for="delay_hours">Delay (hours)</label>
+          <input type="number" id="delay_hours" name="delay_hours" value="24" min="0" max="336" step="0.5" />
+        </div>
+        <div class="field">
+          <label for="delay_temp_f">Temperature (°F)</label>
+          <input type="number" id="delay_temp_f" name="delay_temp_f" value="41" min="20" max="70" step="1" />
+        </div>
+        <div class="field">
+          <label for="transit_distance_km">Transit distance (km)</label>
+          <input type="number" id="transit_distance_km" name="transit_distance_km" value="200" min="10" max="10000" step="10" />
+        </div>
+        <div class="field">
+          <label for="pre_delay_consumption_pct">Pre-delay consumed (%)</label>
+          <input type="number" id="pre_delay_consumption_pct" name="pre_delay_consumption_pct" value="3" min="0" max="50" step="1" />
+        </div>
+      </form>
+      <button type="button" id="predict-loss-btn" class="btn btn-primary">Predict loss</button>
+    </section>
+
+    <!-- Loader -->
+    <div id="loader-overlay" class="loader-overlay" aria-hidden="true" role="status" aria-live="polite">
+      <div class="loader-backdrop"></div>
+      <div class="loader-content">
+        <div class="loader-spinner"></div>
+        <p class="loader-message" id="loader-message">Predicting loss…</p>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <section class="results" id="results-section" aria-hidden="true">
+      <h3>Loss prediction results</h3>
+      <p class="results-intro">XGBoost prediction vs sigmoid baseline for the given delay scenario.</p>
+
+      <div class="loss-cards" id="loss-cards"></div>
+
+      <div class="chart-wrap">
+        <canvas id="chart" width="400" height="220" aria-label="Bar chart comparing XGBoost vs Sigmoid loss rate"></canvas>
+      </div>
+
+      <!-- Recommendations -->
+      <div class="recommendations" id="recommendations-wrap"></div>
+
+      <div id="detail-table-wrap"></div>
+
+      <div class="formula-note">
+        <strong>Formula</strong>: <code>revenue_loss = quantity × price_per_lb × loss_rate</code> &nbsp;|&nbsp;
+        <code>seasonal_loss = revenue_loss × seasonal_index</code>
+      </div>
+    </section>
+
+    <section class="error-toast" id="error-toast" role="alert" aria-hidden="true"></section>
+  </main>
+
+  <footer class="site-footer">
+    <p>Costco Revenue Loss Prediction — XGBoost vs Sigmoid — Model 1 → Model 2 Pipeline</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="/static/js/loss.js"></script>
+</body>
+</html>

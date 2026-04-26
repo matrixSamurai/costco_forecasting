@@ -1,0 +1,54 @@
+# --- Environment & secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Data & cache (heavy or regeneratable) ---
+backend/data/
+backend/cache/
+data/
+cache/
+
+# --- ML models (heavy binary) ---
+*.joblib
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# --- Node ---
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- OS ---
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+
+# --- IDE / editor ---
+.idea/
+.vscode/
+.claude/
+*.swp
+*.swo
+*~
+
+# --- Logs & temp ---
+*.log
+*.tmp
+*.temp
+.cache/

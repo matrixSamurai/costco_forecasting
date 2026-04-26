@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Route Delay Forecast — Costco Wholesale</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <h1 class="logo">Costco Wholesale</h1>
+      <p class="tagline">Route Delay &amp; Cost Forecasting</p>
+    </div>
+  </header>
+
+  <main class="main">
+    <section class="hero">
+      <h2>Routes & delay forecast</h2>
+      <p>Select a <strong>source</strong> and <strong>destination</strong> (Costco US location). We use Google Directions to get alternative routes, then automatically forecast weather-based delay and estimated fuel cost along each route using the best-fit prediction model.</p>
+    </section>
+
+    <section class="route-select">
+      <h3>Source & destination</h3>
+      <div class="route-fields">
+        <div class="field-group">
+          <label for="source-mode">Source mode</label>
+          <select id="source-mode" class="field-select">
+            <option value="tracy" selected>1) Tracy, CA</option>
+            <option value="city">2) Enter city name</option>
+            <option value="gps">3) Use my current location (GPS)</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Selected source</label>
+          <p class="field-readonly" id="source-display">Tracy, CA (37.7397, -121.4252)</p>
+        </div>
+      </div>
+      <div class="route-fields">
+        <div class="field-group" id="source-city-wrap" style="display:none;">
+          <label for="source-city">Source city</label>
+          <input type="text" id="source-city" class="field-input" placeholder="e.g. Sacramento, CA" />
+        </div>
+        <div class="field-group" id="source-gps-wrap" style="display:none;">
+          <label>GPS location</label>
+          <button type="button" id="source-gps-btn" class="btn btn-secondary">Use my current location</button>
+        </div>
+        <div class="field-group">
+          <label for="destination">Destination</label>
+          <select id="destination" class="field-select">
+            <option value="">— Load destinations —</option>
+          </select>
+        </div>
+      </div>
+      <div class="route-fields route-fields-delivery">
+        <div class="field-group">
+          <label for="journey-start-date">Journey start date</label>
+          <input type="date" id="journey-start-date" name="journey_start_date" class="field-input" />
+        </div>
+        <div class="field-group">
+          <label for="journey-start-time">Journey start time</label>
+          <input type="time" id="journey-start-time" name="journey_start_time" class="field-input" value="08:00" />
+        </div>
+      </div>
+      <p class="section-sublabel">Cargo parameters</p>
+      <div class="route-fields route-fields-cargo">
+        <div class="field-group">
+          <label for="cargo-lettuce_type">Lettuce type</label>
+          <select id="cargo-lettuce_type" class="field-select">
+            <option value="iceberg">Iceberg</option>
+            <option value="romaine" selected>Romaine</option>
+            <option value="butterhead">Butterhead</option>
+            <option value="leaf">Leaf</option>
+            <option value="spring_mix">Spring Mix</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label for="cargo-quantity_lb">Quantity (lb)</label>
+          <input type="number" id="cargo-quantity_lb" class="field-input" value="1000" min="1" step="100" />
+        </div>
+        <div class="field-group">
+          <label for="cargo-organic">Organic</label>
+          <select id="cargo-organic" class="field-select">
+            <option value="0" selected>No</option>
+            <option value="1">Yes</option>
+          </select>
+        </div>
+      </div>
+      <button type="button" id="routes-btn" class="btn btn-primary">Show Routes &amp; Predict Delay</button>
+    </section>
+
+    <div id="loader-overlay" class="loader-overlay" aria-hidden="true" role="status" aria-live="polite">
+      <div class="loader-backdrop"></div>
+      <div class="loader-content">
+        <div class="loader-spinner"></div>
+        <p class="loader-message" id="loader-message">Loading…</p>
+        <ol class="loader-steps" id="loader-steps" aria-hidden="true"></ol>
+      </div>
+    </div>
+
+    <!-- 1. Weather Risk Assessment -->
+    <section class="classification-result" id="classification-section" aria-hidden="true">
+      <h3>Weather Risk Assessment <span class="info-tip" tabindex="0"><span class="info-tip-icon">i</span><span class="info-tip-content">Analyzes weather conditions at checkpoints sampled every ~20 miles along your route. A machine learning classifier predicts the likelihood of weather-related transport delays at each stop, then aggregates the results into a route-level risk assessment.</span></span></h3>
+      <p class="results-intro">Severe weather event prediction based on historical weather station data along the route.</p>
+      <div id="classification-banner" class="classification-banner"></div>
+      <div class="classification-details" id="classification-details"></div>
+    </section>
+
+    <!-- 2. Shipment Decision -->
+    <div id="shipment-decision" aria-hidden="true"></div>
+
+    <!-- 3. Map -->
+    <section class="map-section" id="map-section" aria-hidden="true">
+      <h3>Route map</h3>
+      <div class="map-with-legend">
+        <div id="map" class="map-container"></div>
+        <div id="map-legend" class="map-legend" aria-hidden="true"></div>
+      </div>
+    </section>
+
+    <!-- 4. Routes and delay table -->
+    <section class="routes-results" id="routes-results" aria-hidden="true">
+      <h3>Routes and delay</h3>
+      <p class="results-intro">Pitstops every ~20 miles; nearest weather station per pitstop; delay predicted per segment then aggregated using the best-fit ensemble model.</p>
+      <div id="route-cards" class="route-cards"></div>
+    </section>
+
+    <p class="demo-link-wrap">
+      <a href="/demo" class="demo-link">See how delay works with custom weather →</a>
+      &nbsp;|&nbsp;
+      <a href="/loss" class="demo-link">Open loss prediction dashboard →</a>
+    </p>
+
+    <section class="error-toast" id="error-toast" role="alert" aria-hidden="true"></section>
+  </main>
+
+  <footer class="site-footer">
+    <p>Costco Route Delay &amp; Cost Forecasting</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

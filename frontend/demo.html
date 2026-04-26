@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weather Delay Demo — Costco Wholesale</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <h1 class="logo">Costco Wholesale</h1>
+      <p class="tagline">Weather Delay Demo — See how delay changes with different weather inputs</p>
+      <nav class="nav-links">
+        <a href="/" class="nav-link">← Back to Route delay</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main">
+    <section class="hero hero-sub">
+      <h2>Predict delay from weather inputs</h2>
+      <p>Use the weather inputs below to see how <strong>Ridge</strong>, <strong>Random Forest</strong>, and <strong>XGBoost</strong> predict delay % for different weather scenarios.</p>
+    </section>
+
+    <section class="presets">
+      <h3>Scenarios</h3>
+      <div class="preset-buttons">
+        <button type="button" class="btn btn-preset" data-preset="clear">Clear & mild</button>
+        <button type="button" class="btn btn-preset" data-preset="moderate">Moderate wind, low visibility</button>
+        <button type="button" class="btn btn-preset" data-preset="snow">Snow & precipitation</button>
+      </div>
+    </section>
+
+    <section class="weather-form">
+      <h3>Weather inputs &amp; journey start</h3>
+      <p class="form-intro">Enter weather variables and the date and time of the journey start. All inputs are used by the delay models.</p>
+      <form id="weather-form" class="form-grid">
+        <div class="field">
+          <label for="temp_min_mean">Min temp (°F)</label>
+          <input type="number" id="temp_min_mean" name="temp_min_mean" value="38" min="-20" max="80" step="1" />
+        </div>
+        <div class="field">
+          <label for="temp_max_mean">Max temp (°F)</label>
+          <input type="number" id="temp_max_mean" name="temp_max_mean" value="60" min="-20" max="120" step="1" />
+        </div>
+        <div class="field">
+          <label for="snow_depth_mean">Snow depth (cm)</label>
+          <input type="number" id="snow_depth_mean" name="snow_depth_mean" value="0" min="0" max="50" step="0.5" />
+        </div>
+        <div class="field">
+          <label for="prcp_total_mean">Precipitation (mm/day)</label>
+          <input type="number" id="prcp_total_mean" name="prcp_total_mean" value="0.1" min="0" max="20" step="0.1" />
+        </div>
+        <div class="field">
+          <label for="visibility_mean">Visibility (miles)</label>
+          <input type="number" id="visibility_mean" name="visibility_mean" value="2" min="0" max="10" step="0.5" />
+        </div>
+        <div class="field">
+          <label for="wind_speed_mean">Wind speed (mph)</label>
+          <input type="number" id="wind_speed_mean" name="wind_speed_mean" value="15" min="0" max="60" step="1" />
+        </div>
+        <div class="field">
+          <label for="wind_gust_max_mean">Wind gust max (mph)</label>
+          <input type="number" id="wind_gust_max_mean" name="wind_gust_max_mean" value="29" min="0" max="80" step="1" />
+        </div>
+        <div class="field">
+          <label for="demo-journey-start-date">Journey start date</label>
+          <input type="date" id="demo-journey-start-date" name="journey_start_date" class="field-input" />
+        </div>
+        <div class="field">
+          <label for="demo-journey-start-time">Journey start time</label>
+          <input type="time" id="demo-journey-start-time" name="journey_start_time" class="field-input" value="08:00" />
+        </div>
+      </form>
+      <button type="button" id="predict-btn" class="btn btn-primary">Predict delay</button>
+    </section>
+
+    <div id="loader-overlay" class="loader-overlay" aria-hidden="true" role="status" aria-live="polite">
+      <div class="loader-backdrop"></div>
+      <div class="loader-content">
+        <div class="loader-spinner"></div>
+        <p class="loader-message" id="loader-message">Loading…</p>
+        <ol class="loader-steps" id="loader-steps" aria-hidden="true"></ol>
+      </div>
+    </div>
+
+    <section class="classification-result" id="classification-section" aria-hidden="true">
+      <h3>Weather Risk Assessment</h3>
+      <p class="results-intro">Severe weather event prediction based on historical weather station data (4.34M records).</p>
+      <div id="classification-banner" class="classification-banner"></div>
+      <div class="classification-details" id="classification-details"></div>
+    </section>
+
+    <section class="results" id="results-section" aria-hidden="true">
+      <h3>Model predictions</h3>
+      <p class="results-intro">Predicted delay % over baseline travel time for the entered weather.</p>
+      <div class="results-cards" id="results-cards"></div>
+      <div class="chart-wrap">
+        <canvas id="chart" width="400" height="220" aria-label="Bar chart of delay percent by model"></canvas>
+      </div>
+      <div class="formula-note" id="formula-note">
+        <strong>Adjusted duration</strong>: <code>baseline_min × (1 + delay% ÷ 100)</code>.
+      </div>
+    </section>
+
+    <section class="error-toast" id="error-toast" role="alert" aria-hidden="true"></section>
+  </main>
+
+  <footer class="site-footer">
+    <p>Costco Route Delay Forecasting — Weather demo — Ridge, Random Forest, XGBoost</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
